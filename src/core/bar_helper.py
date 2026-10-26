@@ -3,6 +3,7 @@ import logging
 import os
 import winreg
 from collections.abc import Callable
+from ctypes import wintypes
 from datetime import datetime
 from functools import partial
 from typing import TYPE_CHECKING, Any, cast, override
@@ -242,6 +243,66 @@ class BarAnimationManager(QObject):
         self._pending_action = None
         self._stop_animation()
 
+class TaskbarSyncManager(QObject):
+    """Manages taskbar synchronization for bars"""
+    def __init__(self, bar_widget: Bar, parent: QObject | None = None):
+        super().__init__(parent)
+        self.bar_widget = bar_widget
+        self.user32 = ctypes.windll.user32
+        self._timer = QTimer(self.bar_widget)
+        self._last = None
+        self._last_height = None      # height at the previous poll
+        self._last_action = None      # "shown" or "hidden", the last callback fired
+        self._timer.setInterval(100)
+        self._timer.timeout.connect(self._tick)
+        # self.user32.FindWindowW.restype = wintypes.HWND
+        # self.user32.FindWindowW.argtypes = [wintypes.LPCWSTR, wintypes.LPCWSTR]
+
+    def get_taskbar_height(self) -> int:
+        hwnd = user32.FindWindowW("Shell_TrayWnd", None)
+        if not hwnd:
+            return False
+        rect = wintypes.RECT()
+        if not user32.GetWindowRect(hwnd, ctypes.byref(rect)):
+            return False
+        screen_height = user32.GetSystemMetrics(1)
+        return screen_height - rect.top
+
+    def start(self):
+        self._tick()  # set the initial state immediately
+        self._timer.start()
+
+    def cleanup(self):
+        self._timer.stop()
+
+    def _tick(self):
+        height = self.get_taskbar_height()
+
+        if self._last_height is None:
+            # First poll: nothing to compare against, so decide from the height itself
+            self._last_height = height
+            self._fire("shown" if height > 10 else "hidden")
+            return
+
+        if height > self._last_height:
+            self._fire("shown")
+        elif height < self._last_height:
+            self._fire("hidden")
+        # equal: do nothing
+
+        self._last_height = height
+
+    def _fire(self, action: str):
+        # The taskbar slides over several polls, so the height changes in the
+        # same direction on many consecutive ticks. Only call the callback when
+        # the direction changes, so the bar's animation isn't restarted every 100 ms.
+        if action == self._last_action:
+            return
+        self._last_action = action
+        if action == "shown":
+            self.bar_widget.show()
+        else:
+            self.bar_widget.hide()
 
 class AutoHideZone(QFrame):
     """A transparent zone at the edge of the screen to detect when to show the bar"""

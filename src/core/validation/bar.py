@@ -30,6 +30,7 @@ class BarWindowFlags(CustomBaseModel):
     hide_on_fullscreen: bool = False
     hide_on_maximized: bool = False
     auto_hide: bool = False
+    sync_with_taskbar: bool = False
 
 
 class BarDimensions(CustomBaseModel):

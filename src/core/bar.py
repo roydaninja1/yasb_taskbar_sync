@@ -14,6 +14,7 @@ from core.bar_helper import (
     BarContextMenu,
     MaximizedWindowWatcher,
     OsThemeManager,
+    TaskbarSyncManager
 )
 from core.bar_style import AdaptiveBarFrame, BarFrame
 from core.events.service import EventService
@@ -64,6 +65,7 @@ class Bar(QWidget):
         self._style = self.config.style
         self._os_theme_manager = None
         self.autohide_manager: AutoHideManager | None = None
+        self.taskbar_sync_manager: TaskbarSyncManager | None = None
         self._maximized_watcher = None
         self._animation_manager = None
         self._auto_width_manager = None
@@ -137,6 +139,11 @@ class Bar(QWidget):
         if self.window_flags["auto_hide"]:
             self.autohide_manager = AutoHideManager(self, self)
             self.autohide_manager.setup_autohide()
+
+        if self.window_flags["sync_with_taskbar"]:
+            self.taskbar_sync_manager = TaskbarSyncManager(self, self)
+            self.animation["duration"] = 175
+            self.taskbar_sync_manager.start()
 
         if self.window_flags["hide_on_maximized"] and not self.window_flags["windows_app_bar"]:
             self._maximized_watcher = MaximizedWindowWatcher(self, self)
@@ -322,6 +329,8 @@ class Bar(QWidget):
             self.autohide_manager.cleanup()
         if self._animation_manager:
             self._animation_manager.cleanup()
+        if self.taskbar_sync_manager:
+            self.taskbar_sync_manager.cleanup()
         self.try_remove_app_bar()
 
     @override

@@ -1,0 +1,6 @@
+Issues with focus and taskbar
+- when opening taskbar by moving cursor to the bottom of the screen, the taskbar will close when you move your cursor to the yasb bar (since your cursor is no longer at the bottom), thereby closing yasb as well
+- when opening start menu and yasb by pressing the windows key, widgets and popups opened by clicking on the icons in yasb will immediately close since the start menu is in focus
+
+Use python 3.14 for the venv when running the app btw
+Guide here: https://github.com/amnweb/yasb/wiki/Contributing
